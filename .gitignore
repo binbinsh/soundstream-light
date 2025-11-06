@@ -1,0 +1,13 @@
+.vscode/
+.cursor/
+third_party/
+*~
+*.pyc
+__pycache__/
+build/
+uv.lock
+.venv/
+dist/
+*.egg-info/
+models/
+.DS_Store

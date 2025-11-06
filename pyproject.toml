@@ -1,0 +1,55 @@
+[project]
+name = "soundstream-light"
+version = "0.1.3"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["typer>=0.12", "rich>=13.7", "numpy>=1.26"]
+
+[project.urls]
+Homepage = "https://github.com/binbinsh/soundstream-light"
+Repository = "https://github.com/binbinsh/soundstream-light"
+
+[project.scripts]
+soundstream-cli = "soundstream_light.cli:app"
+
+[build-system]
+requires = ["scikit-build-core>=0.10", "pybind11>=2.12", "numpy>=1.26"]
+build-backend = "scikit_build_core.build"
+
+[tool.scikit-build]
+cmake.source-dir = "."
+wheel.packages = ["soundstream_light"]
+cmake.build-type = "Release"
+
+[tool.scikit-build.cmake.define]
+TFLITE_SOURCE_DIR = { env = "TFLITE_SOURCE_DIR" }
+TFLITE_BUILD_DIR = { env = "TFLITE_BUILD_DIR" }
+SOUNDSTREAM_BUILD_PYTHON = "ON"
+SOUNDSTREAM_BUILD_CLI = "OFF"
+
+[tool.scikit-build.sdist]
+include = [
+  "src/**",
+  "include/**",
+  "tests/**",
+  "scripts/**",
+  "soundstream_light/**",
+  "test.wav",
+  "LICENSE",
+  "README.md",
+]
+exclude = [
+  ".venv",
+  ".venv/**",
+  "**/.venv",
+  "**/.venv/**",
+  "build",
+  "build/**",
+  "dist",
+  "dist/**",
+  "third_party/tflite-src",
+  "third_party/tflite-src/**",
+  "third_party/tflite-deps",
+  "third_party/tflite-deps/**",
+  "**/__pycache__/**",
+]

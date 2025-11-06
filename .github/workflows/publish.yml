@@ -1,0 +1,74 @@
+name: Publish Package
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    env:
+      TFLITE_SOURCE_DIR: ${{ github.workspace }}/third_party/tflite-src
+      TFLITE_BUILD_DIR: ${{ github.workspace }}/third_party/tflite-src/cmake_build
+      SOUNDSTREAM_MODELS_DIR: ${{ github.workspace }}/models
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Build TensorFlow Lite from source
+        run: |
+          ./scripts/setup_tflite_from_source.sh --branch v2.15.0 --generator Ninja --build-type Release
+
+      - name: Configure CMake project
+        run: |
+          cmake -S . -B build \
+            -DTFLITE_SOURCE_DIR="$TFLITE_SOURCE_DIR" \
+            -DTFLITE_BUILD_DIR="$TFLITE_BUILD_DIR" \
+            -DSOUNDSTREAM_BUILD_CLI=ON
+
+      - name: Build native CLI
+        run: cmake --build build --target soundstream_cli
+
+      - name: Download SoundStream models
+        run: uv run soundstream-cli models fetch --model-dir "$SOUNDSTREAM_MODELS_DIR"
+
+      - name: Run C++ round-trip tests
+        run: |
+          cmake --build build --target soundstream_roundtrip_test
+          ctest --test-dir build --output-on-failure
+
+      - name: Run Python unit tests
+        run: uv run python -m unittest tests.test_api
+
+      - name: Build wheel and sdist
+        run: uv build
+
+      - name: Repair wheel for manylinux compatibility
+        run: |
+          mkdir -p wheelhouse
+          uv run --with auditwheel auditwheel repair dist/*.whl -w wheelhouse
+          rm dist/*.whl
+          mv wheelhouse/*.whl dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+          attestations: true
+
