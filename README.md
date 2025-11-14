@@ -1,5 +1,8 @@
 # soundstream-light
 
+![PyPI Version](https://img.shields.io/pypi/v/soundstream-light)
+[![Monthly Downloads](https://img.shields.io/badge/dynamic/json?url=https://pypistats.org/api/packages/soundstream-light/recent&query=data.last_month&label=downloads/month)](https://pypistats.org/packages/soundstream-light)
+
 Minimal SoundStream encoder/decoder tooling with a native C++ CLI and a Python API.
 
 ## Python Usage (PyPI)
