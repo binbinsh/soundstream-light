@@ -135,3 +135,59 @@ def models_verify(
     exit_code = 0 if all(results.values()) else 1
     raise typer.Exit(exit_code)
 
+
+@app.command()
+def evaluate(
+    wav: Path = typer.Argument(..., exists=True, readable=True, help="Input WAV to encode/decode"),
+    models_dir: Path | None = typer.Option(None, help="Model directory (defaults to auto-detection)"),
+    threads: int = typer.Option(1, min=1, help="TFLite thread count"),
+    use_xnnpack: bool = typer.Option(True, help="Enable XNNPACK delegate"),
+    compute_stoi: bool = typer.Option(True, help="Compute STOI (requires pystoi)"),
+    compute_pesq: bool = typer.Option(False, help="Compute PESQ (requires pesq, 8k/16k only)"),
+    save_recon: Path | None = typer.Option(None, help="Optional path to write the reconstructed WAV"),
+) -> None:
+    """Encode+decode a WAV and report SI-SNR/STOI/PESQ plus RTF."""
+    try:
+        from . import metrics
+    except Exception as exc:  # pragma: no cover - defensive import
+        console.print(f"Failed to import metrics helpers: {exc}", style="red")
+        raise typer.Exit(1)
+
+    try:
+        report = metrics.evaluate_roundtrip(
+            wav,
+            models_dir=models_dir,
+            threads=threads,
+            use_xnnpack=use_xnnpack,
+            compute_stoi=compute_stoi,
+            compute_pesq=compute_pesq,
+        )
+    except Exception as exc:
+        console.print(f"Evaluation failed: {exc}", style="red")
+        raise typer.Exit(1)
+
+    if save_recon is not None:
+        try:
+            metrics.write_wav_mono(save_recon, report.reconstruction, report.sample_rate_hz)
+        except Exception as exc:
+            console.print(f"Reconstruction save failed: {exc}", style="red")
+            raise typer.Exit(1)
+
+    table = Table(title="Round-trip Evaluation")
+    table.add_column("Metric")
+    table.add_column("Value")
+    labels = {"si_snr_db": "SI-SNR (dB)", "stoi": "STOI (0-1)", "pesq": "PESQ (1-4.5)"}
+    for key, label in labels.items():
+        value = report.metrics.get(key)
+        if value is None:
+            display = "skipped"
+        elif key.endswith("_db"):
+            display = f"{value:.2f} dB"
+        else:
+            display = f"{value:.4f}"
+        table.add_row(label, display)
+    table.add_row("Encode time", f"{report.encode_seconds:.3f} s")
+    table.add_row("Decode time", f"{report.decode_seconds:.3f} s")
+    table.add_row("RTF", f"{report.rtf:.3f}" if report.rtf is not None else "n/a")
+    console.print(table)
+    raise typer.Exit(0)

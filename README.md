@@ -45,6 +45,30 @@ uv run soundstream-cli encode test.wav test.embeddings
 uv run soundstream-cli decode test.embeddings test_recon.wav
 ```
 
+## Evaluate Round-Trip Quality
+
+Install optional metric dependencies (STOI/PESQ) when you need quality numbers:
+
+```bash
+uv pip install 'soundstream-light[metrics]'
+```
+
+With models present, you can run the built-in evaluator against the bundled `test.wav` (or any mono 16 kHz WAV) to get SI-SNR, STOI, optional PESQ, and RTF:
+
+```bash
+uv run soundstream-cli evaluate test.wav --compute-pesq --save-recon test_eval.wav
+```
+
+Sample results on the bundled `test.wav` (M1, XNNPACK, 1 thread):
+
+```
+SI-SNR: 7.59 dB
+STOI:   0.9676
+PESQ:   3.6041
+RTF:    0.015
+Encode: 0.017 s | Decode: 0.023 s
+```
+
 ## Build from source
 
 You can also build from source code by cloning this repo. Make sure that `git`, `cmake`, a C++17 compiler, and typical build tools (e.g. make, ninja, perl) are available.
